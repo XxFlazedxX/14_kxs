@@ -21,7 +21,7 @@ toggleBtn.Position = UDim2.new(0, frame.Position.X.Offset + frame.Size.X.Offset 
 toggleBtn.BackgroundColor3 = Color3.fromRGB(255, 182, 193)
 toggleBtn.Text = "-"
 toggleBtn.TextColor3 = Color3.new(1, 1, 1)
-toggleBtn.Font = Enum.Font.FredokaOne -- Cute round font
+toggleBtn.Font = Enum.Font.FredokaOne
 toggleBtn.TextScaled = true
 toggleBtn.Draggable = true
 
@@ -32,7 +32,7 @@ title.Position = UDim2.new(0, 0, 0, 0)
 title.BackgroundTransparency = 1
 title.Text = "Made By Azra"
 title.TextColor3 = Color3.new(1, 1, 1)
-title.Font = Enum.Font.Fantasy -- Girly styled font
+title.Font = Enum.Font.Fantasy
 title.TextScaled = true
 
 -- Macro Button
@@ -117,32 +117,57 @@ local sound = Instance.new("Sound", gui)
 sound.SoundId = "rbxassetid://9118823106"
 sound.Volume = 1
 
--- Macro Logic
-local pulling = false
-macroBtn.MouseButton1Click:Connect(function()
+-- ⛓️ Macro + EaseIn Logic from YOUR script
+local isEaseInActive = false
+local isPulling = false
+local pulledOnce = false
+local speed = 27
+
+-- Get rope
+local function getRope()
+	local ropesFolder = workspace:FindFirstChild("Ropes")
+	if not ropesFolder then return nil end
+	local userRope = ropesFolder:FindFirstChild(player.Name)
+	if not userRope then return nil end
+	return userRope:FindFirstChild("mainConnectionRope")
+end
+
+-- EaseIn button logic
+easeBtn.MouseButton1Click:Connect(function()
 	sound:Play()
-	pulling = not pulling
-	macroBtn.Text = pulling and "Macro: ON" or "Macro: OFF"
-	if pulling and workspace:FindFirstChild("RopeConstraint") then
-		workspace.RopeConstraint.Length = 2
-	elseif workspace:FindFirstChild("RopeConstraint") then
-		workspace.RopeConstraint.Length = 100
+	isEaseInActive = not isEaseInActive
+	easeBtn.Text = isEaseInActive and "EaseIn: ON" or "EaseIn: OFF"
+	local rope = getRope()
+	if rope and isEaseInActive then
+		rope.Length = 50
 	end
 end)
 
--- EaseIn Logic
-local easing = false
-easeBtn.MouseButton1Click:Connect(function()
+-- Macro button logic
+macroBtn.MouseButton1Click:Connect(function()
 	sound:Play()
-	easing = not easing
-	easeBtn.Text = easing and "EaseIn: ON" or "EaseIn: OFF"
-	if easing then
-		coroutine.wrap(function()
-			while easing and workspace:FindFirstChild("RopeConstraint") and workspace.RopeConstraint.Length > 2 do
-				workspace.RopeConstraint.Length -= 1
-				wait(0.03)
+	isPulling = not isPulling
+	pulledOnce = isPulling or pulledOnce
+	macroBtn.Text = isPulling and "Pull: ON" or "Throw: OFF"
+end)
+
+-- Main loop
+runService.RenderStepped:Connect(function(dt)
+	local rope = getRope()
+	if rope then
+		if isEaseInActive then
+			rope.Length = math.max(rope.Length - speed * dt, 5)
+			if rope.Length <= 5 then
+				isEaseInActive = false
+				easeBtn.Text = "EaseIn: OFF"
 			end
-		end)()
+		else
+			if isPulling then
+				rope.Length = 5
+			elseif pulledOnce then
+				rope.Length = 999999999
+			end
+		end
 	end
 end)
 
